@@ -4,34 +4,6 @@ Based on: Personal Identification Based on Iris Texture Analysis (Ma et al., 200
 
 This README file provides an overview of the iris recognition system, explaining the design logic, discussing limitations, and suggesting improvements. 
 
-Our final results are:
-------------------------------------------------------------
-Metric          Original        LDA (107d)      Difference
-------------------------------------------------------------
-L1 Distance             0.8565         0.7778        -0.0787
-L2 Distance             0.8032         0.7940        -0.0093
-Cosine                  0.7986         0.8403         0.0417
-------------------------------------------------------------
-
-------------------------------------------------------------
-Verification performance for original features using cosine similarity score...
-
-Verification Results at Different Thresholds:
-Threshold    False match rate (%)    False non-match rate (%)
-------------------------------------------------------------
-0.968        0.010                   57.18
-0.969        0.001                   65.97
-0.971        0.000                   71.30
-
-Verification performance for LDA features 107D using cosine similarity score...
-
-Verification Results at Different Thresholds:
-Threshold    False match rate (%)    False non-match rate (%)
-------------------------------------------------------------
-0.435        0.010                   27.55
-0.485        0.001                   39.81
-0.500        0.000                   43.52
-
 ## DESIGN LOGIC
 
 The iris recognition system is a comprehensive pipeline designed to perform both identification and verification of individuals based on iris patterns. The system is divided into four main stages:
