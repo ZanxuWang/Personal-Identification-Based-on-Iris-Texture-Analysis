@@ -5,7 +5,22 @@ import os
 from pathlib import Path
 
 def extract_roi(image, center_x, center_y, size=120):
-    """Extract a region of interest (ROI) centered at the given point"""
+    """
+    Extract a region of interest (ROI) centered at the given point.
+
+    Logic:
+    - Extracts a square region of interest (ROI) centered at given coordinates.
+    - Handles boundary cases to ensure the ROI stays within image borders.
+    - Returns both the ROI and its position in the original image.
+
+    Parameters:
+    - image: Input grayscale image array.
+    - center_x, center_y: Center coordinates of the ROI.
+    - size: Size of the ROI window (default=120).
+    
+    Returns:
+    - (ROI image, (x_start, y_start))
+    """
     half_size = size // 2
     h, w = image.shape
 
@@ -18,7 +33,25 @@ def extract_roi(image, center_x, center_y, size=120):
     return image[y_start:y_end, x_start:x_end], (x_start, y_start)
 
 def preprocess_pupil_roi(roi, kernel_size=5):
-    """Enhanced preprocessing for better pupil segmentation"""
+    """
+    Enhanced preprocessing for better pupil segmentation.
+
+    Logic:
+    1. Enhances contrast using CLAHE for better pupil visibility.
+    2. Applies bilateral filtering to reduce noise while preserving edges.
+    3. Uses blackhat morphology to enhance dark regions (pupil).
+    4. Applies median blur for final noise reduction.
+
+    Parameters:
+    - roi: Input ROI image.
+    - kernel_size: Kernel size for morphological operations (default=5).
+    - clipLimit=3.0: CLAHE contrast limit.
+    - tileGridSize=(8,8): CLAHE grid size.
+    - Bilateral filter params: d=9, sigmaColor=75, sigmaSpace=75.
+
+    Returns:
+    - Preprocessed ROI image.
+    """
     # Start with contrast enhancement
     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
     roi_enhanced = clahe.apply(roi)
@@ -41,7 +74,20 @@ def preprocess_pupil_roi(roi, kernel_size=5):
     return roi_blurred
 
 def otsu_threshold(image):
-    """Apply Otsu's thresholding with additional preprocessing"""
+    """
+    Logic:
+
+    Preprocesses the input image using preprocess_pupil_roi.
+    Applies Otsu's method for automatic thresholding.
+    Cleans the binary image using morphological operations, to reduce the effect of eyelashes that affects finding countours of pupil
+
+    Parameters:
+
+    image: Input preprocessed image.
+    kernel: 5x5 elliptical structuring element for morphology.
+    Returns: Binary image with the pupil region highlighted.
+    
+    """
     # Apply preprocessing
     processed_image = preprocess_pupil_roi(image)
     
@@ -57,7 +103,22 @@ def otsu_threshold(image):
 
 
 def find_pupil_initial(image):
-    """Find initial pupil location using projection method"""
+    """
+    Find initial pupil location using projection method
+    Logic:
+
+    Extracts a subsection of the image where the pupil is likely located.
+    Calculates vertical and horizontal projections.
+    Finds the minimum projection values to estimate the pupil center.
+    Adjusts coordinates to be relative to the original image.
+
+    Parameters:
+
+    image: Input grayscale image.
+    subImage: Region [60:240, 100:220] for initial search.
+    Returns: (x_center, y_center) as the estimated pupil center.
+    
+    """
     # First, take a subsection of the image
     subImage = image[60:240, 100:220]
     
@@ -77,7 +138,25 @@ def find_pupil_initial(image):
 
 
 def find_pupil_contour(binary_image, fallback_radius=20):
-    """Find pupil center and radius using contour fitting with validation and fallback options."""
+    """
+    Find pupil center and radius using contour fitting with validation and fallback options.
+    
+    Logic:
+
+    Finds contours in the binary image.
+    Filters contours based on area and circularity.
+    Fits an ellipse or minimum enclosing circle to the best contour.
+    Includes a fallback mechanism for failed detection.
+    
+    Parameters:
+
+    binary_image: Thresholded image.
+    fallback_radius: Default radius if detection fails (default=20).
+    area > 500: Minimum contour area threshold.
+    circularity > 0.3: Minimum circularity threshold.
+    Returns: (center, radius, contour, circularity).
+    
+    """
     # Find contours in the binary image
     contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -124,7 +203,25 @@ def find_pupil_contour(binary_image, fallback_radius=20):
 
 
 def preprocess_iris_roi(roi):
-    """Preprocess the ROI for iris boundary detection with enhanced contrast"""
+    """
+    Preprocess the ROI for iris boundary detection with enhanced contrast
+    
+    Logic:
+
+    Enhances contrast using CLAHE.
+    Applies bilateral filtering for noise reduction.
+    Uses unsharp masking for edge enhancement.
+    Applies adaptive thresholding for binarization.
+
+    Parameters:
+
+    roi: Input ROI image.
+    clipLimit=3.0: CLAHE parameter.
+    tileGridSize=(8,8): CLAHE grid size.
+    Bilateral filter params: d=9, sigmaColor=75, sigmaSpace=75.
+    Returns: (enhanced_image, thresholded_image).
+
+    """
     # Apply CLAHE instead of simple histogram equalization for better contrast
     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
     roi_eq = clahe.apply(roi)
@@ -150,7 +247,30 @@ def preprocess_iris_roi(roi):
 
 
 def find_iris_boundary(image, pupil_center, pupil_radius):
-    """Find iris boundary using edge detection and Hough transform with enhanced fallback mechanism"""
+    """
+    Find iris boundary using edge detection and Hough transform with enhanced fallback mechanism
+    
+    Logic:
+
+    Extracts a larger ROI around the pupil.
+    Preprocesses the ROI for edge detection.
+    Creates a mask focusing on the expected iris region.
+    Detects the iris boundary using the Hough transform.
+    Implements a scoring system for circle selection.
+    
+    Parameters:
+
+    image: Input grayscale image.
+    pupil_center: Coordinates of the detected pupil center.
+    pupil_radius: Detected pupil radius.
+    roi_size=240: Size of the iris ROI window.
+    ideal_radius=95: Expected iris radius.
+    max_allowed_center_dist: Maximum allowed distance from the pupil center.
+    Hough parameters: dp=1, minDist=pupil_radius*1.5, param1=60, param2=20.
+    
+    Returns: (iris_circle, roi_filtered, roi_thresh, edges).
+
+    """
     # Extract larger ROI for iris detection
     roi_size = 240  # Increased ROI size to accommodate larger iris
     roi, (roi_x, roi_y) = extract_roi(image, pupil_center[0], pupil_center[1], size=roi_size)
@@ -272,14 +392,31 @@ def find_iris_boundary(image, pupil_center, pupil_radius):
         fallback_iris = [
             pupil_center[0],  # Use pupil center x
             pupil_center[1],  # Use pupil center y
-            pupil_radius + 62  # Estimated radius using fallback
+            pupil_radius + 60  # Estimated radius using fallback
         ]
         return fallback_iris, roi_filtered, roi_thresh, edges
     
     return detected_iris, roi_filtered, roi_thresh, edges
 
 def detect_iris_and_pupil(image_path):
-    """Main function to detect both iris and pupil"""
+    """
+    Main function to detect both iris and pupil
+    
+    Logic:
+
+    Loads the image in grayscale.
+    Finds the initial pupil location.
+    Extracts and processes the pupil ROI.
+    Detects the pupil boundary using find_pupil_contour.
+    Uses the pupil information to detect the iris boundary.
+    Includes visualization capability (commented out).
+
+    Parameters:
+
+    image_path: Path to the input image file.
+    Returns: (final_pupil_center, pupil_radius, iris_circle).
+    
+    """
     # Read the image in grayscale
     image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
     if image is None:
@@ -378,113 +515,4 @@ def detect_iris_and_pupil(image_path):
 
     return final_pupil_center, pupil_radius, iris_circle
 
-def detect_iris_and_pupil_test(image_path):
-    """Main function to detect both iris and pupil"""
-    # Read the image in grayscale
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    if image is None:
-        raise ValueError(f"Could not read the image at path: {image_path}")
 
-    # Find initial pupil location
-    x_center, y_center = find_pupil_initial(image)
-
-    # Extract 120x120 ROI for pupil detection
-    pupil_roi, (roi_x, roi_y) = extract_roi(image, x_center, y_center, size=120)
-
-    # Apply Otsu's thresholding for pupil detection
-    binary_roi = otsu_threshold(pupil_roi)
-
-    # Find pupil using contour fitting
-    center, pupil_radius, contour, circularity = find_pupil_contour(binary_roi)
-
-    if center is None:
-        print("Warning: Initial pupil detection failed. Using fallback values.")
-        final_pupil_center = (x_center, y_center)
-        pupil_radius = 20
-        circularity = 0.0  # Set default circularity when detection fails
-    else:
-        # Convert ROI coordinates back to original image coordinates
-        pupil_x = roi_x + center[0]
-        pupil_y = roi_y + center[1]
-        final_pupil_center = (pupil_x, pupil_y)
-
-  
-    # Find iris boundary
-    iris_data = find_iris_boundary(image, final_pupil_center, pupil_radius)
-    
-    if iris_data is None:
-        print("Warning: Iris boundary detection failed completely")
-        return final_pupil_center, pupil_radius, None
-        
-    iris_circle, roi_filtered, roi_thresh, edges = iris_data
-
-    # Create output directory if it doesn't exist
-    output_dir = r"C:\Users\chris\OneDrive\Desktop\24fall\5293\Assignments_export\GroupProject\datasets\Localization"
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Get the original image filename without extension
-    img_name = Path(image_path).stem
-
-    # Create figure for iris and pupil detection
-    plt.figure(figsize=(8, 8))
-    plt.imshow(image, cmap='gray')
-
-    # Draw pupil
-    pupil = plt.Circle(final_pupil_center, pupil_radius, color='r',
-                      fill=False, label='Pupil')
-    plt.gca().add_artist(pupil)
-
-    # Draw iris if found
-    if iris_circle is not None:
-        iris = plt.Circle((iris_circle[0], iris_circle[1]), iris_circle[2],
-                         color='g', fill=False, label='Iris')
-        plt.gca().add_artist(iris)
-
-    plt.legend()
-    plt.title('Detected Iris and Pupil')
-
-    # Save the plot
-    output_path = os.path.join(output_dir, f"{img_name}_detection.png")
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
-    plt.close()  # Close the figure to free memory
-
-    return final_pupil_center, pupil_radius, iris_circle
-
-def main():
-    """Main execution function"""
-    image_path = r"C:\Users\chris\OneDrive\Desktop\24fall\5293\Assignments_export\GroupProject\datasets\CASIA Iris Image Database (version 1.0)\044\1\044_1_1.bmp"
-
-    try:
-        # Check if file exists
-        if not os.path.exists(image_path):
-            raise FileNotFoundError(f"Image file not found: {image_path}")
-            
-        pupil_center, pupil_radius, iris = detect_iris_and_pupil(image_path)
-
-        # Print results with null checks
-        if pupil_center is not None:
-            print(f"Pupil center: {pupil_center}")
-        else:
-            print("Pupil center not detected")
-            
-        if pupil_radius is not None:
-            print(f"Pupil radius: {pupil_radius}")
-        else:
-            print("Pupil radius not detected")
-
-        if iris is not None:
-            print(f"Iris center: ({iris[0]}, {iris[1]})")
-            print(f"Iris radius: {iris[2]}")
-        else:
-            print("Iris not detected")
-
-    except FileNotFoundError as e:
-        print(f"File error: {str(e)}")
-    except Exception as e:
-        print(f"Error processing image: {str(e)}")
-        # Print the full traceback for debugging
-        import traceback
-        traceback.print_exc()
-
-if __name__ == "__main__":
-    main()

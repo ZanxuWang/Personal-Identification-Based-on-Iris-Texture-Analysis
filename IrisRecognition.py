@@ -14,9 +14,41 @@ from IrisMatching import run_lda_analysis
 
 def main():
     """
-    Main function performing all iris recognition steps
+    Orchestrates the entire iris recognition process by executing all major steps:
+    1. Data Preparation:
+        - Defines the dataset path.
+        - Initializes lists to store training and testing features and labels.
+        - Processes training and testing images to extract features.
+    2. Iris Localization and Normalization:
+        - Detects the iris and pupil boundaries in each image.
+        - Normalizes the iris region to a fixed size.
+        - Enhances the normalized iris image for better feature extraction.
+    3. Feature Extraction:
+        - Extracts discriminative features from the enhanced iris images using Gabor filters.
+        - Handles rotation compensation by processing images at multiple angles.
+    4. Template Generation:
+        - Computes mean feature vectors (templates) for each subject from the training data.
+    5. Recognition Performance Evaluation:
+        - Evaluates the system's identification performance using different distance metrics.
+        - Performs dimensionality reduction using LDA and re-evaluates performance.
+        - Visualizes the impact of dimensionality reduction on accuracy.
+    6. Verification Performance Analysis:
+        - Analyzes the system's verification performance by plotting ROC curves.
+        - Compares performance before and after applying LDA.
+
+    Parameters:
+        None
+
+    Returns:
+        None
+
+    Notes:
+        - The function assumes a specific directory structure for the dataset.
+        - It uses several helper functions from different modules to perform specialized tasks.
+        - Intermediate results like feature vectors and templates are stored in memory.
+        - Outputs include printed accuracy metrics and plotted figures for analysis.
     """
-    # Dataset path
+    # Dataset path，plz set to your own dataset path before running it
     base_dir = r".\datasets\CASIA Iris Image Database (version 1.0)"
     
     # Extract training features
@@ -124,14 +156,14 @@ def main():
     template_labels = np.arange(1, 109)
     
     # For original features
-    print("Analyzing verification performance for original features...")
+    print("Analyzing verification performance for original features using cosine similarity score...")
     templates = compute_templates(train_features, train_labels)
     original_results, genuine_scores, impostor_scores = plot_roc_and_metrics(
         test_features, test_labels, templates, template_labels
     )
     
     # For LDA features (using 100 dimensions)
-    print("\nAnalyzing verification performance for LDA features...")
+    print("\nAnalyzing verification performance for LDA features using cosine similarity score...")
     lda = LinearDiscriminantAnalysis(n_components=107)
     lda.fit(train_features, train_labels)
     train_transformed = lda.transform(train_features)
@@ -143,3 +175,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

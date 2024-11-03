@@ -6,6 +6,23 @@ def run_lda_analysis(train_features, train_labels, test_features, test_labels, d
 
     """
     Perform LDA analysis with different dimensions
+
+    Logic:
+    1. For each target dimension:
+        - Creates LDA model with specified components
+        - Fits model to training data
+        - Transforms both training and test features
+        - Computes templates from transformed features
+        - Evaluates recognition performance
+
+    Parameters:
+    - `train_features`: Training set feature matrix
+    - `train_labels`: Training set class labels
+    - `test_features`: Test set feature matrix
+    - `test_labels`: Test set class labels
+    - `dimensions`: List of target dimensions to evaluate
+    - Returns: Array of [dimension, acc_l1, acc_l2, acc_cos] for each dimension
+
     """
     results = []
     for n_components in dimensions:

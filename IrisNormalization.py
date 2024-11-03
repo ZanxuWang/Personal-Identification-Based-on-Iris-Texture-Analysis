@@ -5,6 +5,17 @@ from IrisLocalization import detect_iris_and_pupil
 def normalize_iris(image, final_pupil_center, pupil_radius, iris_circle, M=64, N=512, initial_angle=0):
     """
     Normalize the iris by unwrapping it to a rectangular block with fixed size (M, N).
+
+    Logic:
+    1. Converts angle offset from degrees to radians
+    2. Creates empty array for normalized image
+    3. Extracts pupil and iris parameters
+    4. For each point in normalized image:
+        - Calculates corresponding theta angle
+        - Computes coordinates on pupil boundary
+        - Computes coordinates on iris boundary
+        - Uses linear interpolation between boundaries
+        - Maps pixel values to normalized image
     
     Parameters:
         image (numpy.ndarray): Grayscale input image.
@@ -51,28 +62,4 @@ def normalize_iris(image, final_pupil_center, pupil_radius, iris_circle, M=64, N
     return normalized_iris
 
 
-# Example usage function
-def main():
-    # Load and detect iris/pupil on an example image
-    image_path = r"C:\Users\chris\OneDrive\Desktop\24fall\5293\Assignments_export\GroupProject\datasets\CASIA Iris Image Database (version 1.0)\023\1\023_1_1.bmp"
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
-    # Detect iris and pupil
-    final_pupil_center, pupil_radius, iris_circle = detect_iris_and_pupil(image_path)
-    
-    if final_pupil_center and iris_circle:
-        # Normalize the iris with different initial angles
-        for angle in [-9, -6, -3, 0, 3, 6, 9]:
-            normalized_iris = normalize_iris(image, final_pupil_center, pupil_radius, iris_circle, initial_angle=angle)
-            
-            # Save or display the normalized iris image
-            #cv2.imwrite(f"normalized_iris_angle_{angle}.png", normalized_iris)
-            cv2.imshow(f"Normalized Iris Angle {angle}", normalized_iris)
-            cv2.waitKey(0)
-        cv2.destroyAllWindows()
-    else:
-        print("Iris or pupil detection failed.")
-
-
-if __name__ == "__main__":
-    main()

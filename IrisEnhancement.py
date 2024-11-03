@@ -8,6 +8,18 @@ def enhance_iris(normalized_iris, block_size=16, enhancement_block_size=32):
     Enhance the normalized iris image by compensating for lighting variations
     and improving contrast using histogram equalization.
     
+    Logic:
+    1. Background Illumination Estimation:
+        - Divides image into blocks 16x16
+        - Calculates mean intensity per block
+        - Resizes back to original size using bicubic interpolation
+    2. Illumination Compensation:
+        - Subtracts background illumination
+        - Clips values to valid range
+    3. Contrast Enhancement:
+        - Applies local histogram equalization per block 32x32
+        - Processes overlapping blocks for smooth transitions
+
     Parameters:
         normalized_iris (numpy.ndarray): The normalized iris image (MxN).
         block_size (int): Size of each block for background illumination estimation (default 16x16).
@@ -49,30 +61,4 @@ def enhance_iris(normalized_iris, block_size=16, enhancement_block_size=32):
     
     return enhanced_iris
 
-# Example usage function
-def main():
-    # Load and detect iris/pupil on an example image
-    image_path = r"C:\Users\chris\OneDrive\Desktop\24fall\5293\Assignments_export\GroupProject\datasets\CASIA Iris Image Database (version 1.0)\023\1\023_1_1.bmp"
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
-    # Detect iris and pupil
-    final_pupil_center, pupil_radius, iris_circle = detect_iris_and_pupil(image_path)
-    
-    if final_pupil_center and iris_circle:
-        # Normalize the iris
-        normalized_iris = normalize_iris(image, final_pupil_center, pupil_radius, iris_circle, initial_angle=0)
-        
-        # Enhance the normalized iris image
-        enhanced_iris = enhance_iris(normalized_iris)
-        
-        # Save or display the enhanced iris image
-        cv2.imwrite("enhanced_iris.png", enhanced_iris)
-        cv2.imshow("Enhanced Iris", enhanced_iris)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-    else:
-        print("Iris or pupil detection failed.")
-
-
-if __name__ == "__main__":
-    main()

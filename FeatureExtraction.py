@@ -113,7 +113,17 @@ def compute_feature_vector(img1, img2, block_size=8):
 
 # Example Usage
 def extract_feature(iris_img):
+    '''
+    Logic:
+    1. Applies two Gabor filters with different parameters
+    2. Computes feature vector from filtered images
 
+    Parameters:
+    - `iris_img`: Input enhanced iris image
+    - `sigma_x1=3.0, sigma_y1=1.5`: Parameters for first filter
+    - `sigma_x2=4.5, sigma_y2=1.5`: Parameters for second filter
+    - Returns: 1536-dimensional feature vector
+    '''
     # Define parameters for 2 Gabor filters channels
     sigma_x1, sigma_y1 = 3.0, 1.5
     sigma_x2, sigma_y2 = 4.5, 1.5
